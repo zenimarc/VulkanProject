@@ -32,7 +32,9 @@ protected:
 	Model M_SlHandle;
 	Texture T_SlHandle;
 	// what your going to copy, is the instance of DSL. are elments that are passed to shaders
-	DescriptorSet DS1;
+	DescriptorSet DS_SlBody;
+    DescriptorSet DS_SlHandle;
+    
 
 	// Here you set the main application parameters
 	void setWindowParameters()
@@ -44,9 +46,9 @@ protected:
 		initialBackgroundColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 		// Descriptor pool sizes
-		uniformBlocksInPool = 1; // how many descriptor set you're going to use
-		texturesInPool = 1;
-		setsInPool = 1;
+		uniformBlocksInPool = 2; // how many descriptor set you're going to use
+		texturesInPool = 2;
+		setsInPool = 2;
 	}
 
 	// Here you load and setup all your Vulkan objects
@@ -68,7 +70,7 @@ protected:
 		// Models, textures and Descriptors (values assigned to the uniforms)
 		M_SlBody.init(this, MODEL_PATH + "SlotBody.obj");
 		T_SlBody.init(this, TEXTURE_PATH + "SlotBody.png");
-		DS1.init(this, &DSL1, {// the second parameter, is a pointer to the Uniform Set Layout of this set
+		DS_SlBody.init(this, &DSL1, {// the second parameter, is a pointer to the Uniform Set Layout of this set
 							   // the last parameter is an array, with one element per binding of the set.
 							   // first  elmenet : the binding number
 							   // second element : UNIFORM or TEXTURE (an enum) depending on the type
@@ -79,16 +81,23 @@ protected:
 
 		M_SlHandle.init(this, MODEL_PATH + "SlotHandle.obj");
 		T_SlHandle.init(this, TEXTURE_PATH + "SlotHandle.png");
+        DS_SlHandle.init(this, &DSL1, { // it uses same layout but we set a different instance of it
+                               {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+                               {1, TEXTURE, 0, &T_SlHandle}});
 	}
 
 	// Here you destroy all the objects you created!
 	void localCleanup()
 	{
-		DS1.cleanup();
+        //model 1 cleanup
+		DS_SlBody.cleanup();
 		T_SlBody.cleanup();
 		M_SlBody.cleanup();
+        //model 2 cleanup
+        DS_SlHandle.cleanup();
 		T_SlHandle.cleanup();
 		M_SlHandle.cleanup();
+        
 		P1.cleanup();
 		DSL1.cleanup();
 	}
@@ -115,7 +124,7 @@ protected:
 		// property .descriptorSets of a descriptor set contains its elements.
 		vkCmdBindDescriptorSets(commandBuffer,
 								VK_PIPELINE_BIND_POINT_GRAPHICS,
-								P1.pipelineLayout, 0, 1, &DS1.descriptorSets[currentImage],
+								P1.pipelineLayout, 0, 1, &DS_SlBody.descriptorSets[currentImage],
 								0, nullptr);
 
 		// property .indices.size() of models, contains the number of triangles * 3 of the mesh.
@@ -128,6 +137,10 @@ protected:
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersHandle, offsetsHandle);
 		vkCmdBindIndexBuffer(commandBuffer, M_SlHandle.indexBuffer, 0,
 							 VK_INDEX_TYPE_UINT32);
+        vkCmdBindDescriptorSets(commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                P1.pipelineLayout, 0, 1, &DS_SlHandle.descriptorSets[currentImage],
+                                0, nullptr);
 		vkCmdDrawIndexed(commandBuffer,
 						 static_cast<uint32_t>(M_SlHandle.indices.size()), 1, 0, 0, 0);
 	}
@@ -141,7 +154,6 @@ protected:
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 		UniformBufferObject ubo{};
-		ubo.model = glm::mat4(1.0f),
 		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
 							   glm::vec3(0.0f, 0.0f, 0.0f),
 							   glm::vec3(0.0f, 1.0f, 0.0f));
@@ -151,13 +163,24 @@ protected:
 		ubo.proj[1][1] *= -1;
 
 		void *data;
-
+        
+        // doing for every model or better for every (DS_) -- HERE: SLBody --
 		// Here is where you actually update your uniforms
 		// uniformBuffersMemory[0] -> the 0 is the binding of the uniform you're going to change
-		vkMapMemory(device, DS1.uniformBuffersMemory[0][currentImage], 0,
+        ubo.model = glm::mat4(1.0f);
+		vkMapMemory(device, DS_SlBody.uniformBuffersMemory[0][currentImage], 0,
 					sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(device, DS1.uniformBuffersMemory[0][currentImage]);
+		vkUnmapMemory(device, DS_SlBody.uniformBuffersMemory[0][currentImage]);
+        // ------------
+        
+        // doing for every model or better for every (DS_)
+        ubo.model = glm::translate(glm::mat4(1), glm::vec3(0.3f, 0.5f, -0.15f)); // you can modify your ubo for each DS before passing it
+        vkMapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage], 0,
+                    sizeof(ubo), 0, &data);
+        memcpy(data, &ubo, sizeof(ubo));
+        vkUnmapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage]);
+        // ------------
 	}
 };
 
