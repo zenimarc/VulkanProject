@@ -29,6 +29,8 @@ protected:
 	// Models, textures and Descriptors (values assigned to the uniforms)
 	Model M_SlBody;
 	Texture T_SlBody;
+	Model M_SlHandle;
+	Texture T_SlHandle;
 	// what your going to copy, is the instance of DSL. are elments that are passed to shaders
 	DescriptorSet DS1;
 
@@ -74,6 +76,9 @@ protected:
 							   // fourth element : only for TEXTUREs, the pointer to the corresponding texture object
 							   {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 							   {1, TEXTURE, 0, &T_SlBody}});
+
+		M_SlHandle.init(this, MODEL_PATH + "SlotHandle.obj");
+		T_SlHandle.init(this, TEXTURE_PATH + "SlotHandle.png");
 	}
 
 	// Here you destroy all the objects you created!
@@ -82,6 +87,8 @@ protected:
 		DS1.cleanup();
 		T_SlBody.cleanup();
 		M_SlBody.cleanup();
+		T_SlHandle.cleanup();
+		M_SlHandle.cleanup();
 		P1.cleanup();
 		DSL1.cleanup();
 	}
@@ -95,6 +102,7 @@ protected:
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 						  P1.graphicsPipeline);
 
+		// MODEL OF BODY
 		VkBuffer vertexBuffers[] = {M_SlBody.vertexBuffer}; // possibly add more vertexBuffers
 		// property .vertexBuffer of models, contains the VkBuffer handle to its vertex buffer
 		VkDeviceSize offsets[] = {0};
@@ -113,6 +121,15 @@ protected:
 		// property .indices.size() of models, contains the number of triangles * 3 of the mesh.
 		vkCmdDrawIndexed(commandBuffer,
 						 static_cast<uint32_t>(M_SlBody.indices.size()), 1, 0, 0, 0);
+
+		// MODEL OF Handle
+		VkBuffer vertexBuffersHandle[] = {M_SlHandle.vertexBuffer};
+		VkDeviceSize offsetsHandle[] = {0};
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersHandle, offsetsHandle);
+		vkCmdBindIndexBuffer(commandBuffer, M_SlHandle.indexBuffer, 0,
+							 VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(commandBuffer,
+						 static_cast<uint32_t>(M_SlHandle.indices.size()), 1, 0, 0, 0);
 	}
 
 	// Here is where you update the uniforms.
