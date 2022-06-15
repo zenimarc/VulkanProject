@@ -37,14 +37,24 @@ protected:
 	Pipeline P1;
 
 	// Models, textures and Descriptors (values assigned to the uniforms)
+    // (SLOT BODY)
 	Model M_SlBody;
 	Texture T_SlBody;
-    // DescriptoSet is the instance of DSL. are elments that are passed to shaders
-    DescriptorSet DS_SlBody; // instances of DSLobj
+    DescriptorSet DS_SlBody; // instances of DSLobj, are elments that are passed to shaders
     
+    // for each model (HANDLE)
 	Model M_SlHandle;
 	Texture T_SlHandle;
 	DescriptorSet DS_SlHandle; // instances of DSLobj
+    // ---------
+    
+    // for each model (WHEELS)
+    Model M_SlWheel;
+    Texture T_SlWheel;
+    DescriptorSet DS_SlWheel1; // instances three times because same model with same texture but diff pos.
+    DescriptorSet DS_SlWheel2;
+    DescriptorSet DS_SlWheel3;
+    // ---------
     
     
     DescriptorSet DS_global;
@@ -59,9 +69,9 @@ protected:
 		initialBackgroundColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 		// Descriptor pool sizes
-		uniformBlocksInPool = 3; // how many descriptor set you're going to use
-		texturesInPool = 2;
-		setsInPool = 3; //handle, body, global for now
+		uniformBlocksInPool = 6; // how many descriptor set you're going to use
+		texturesInPool = 5;
+		setsInPool = 6; //handle, body, global for now + 3 wheels
 	}
 
 	// Here you load and setup all your Vulkan objects
@@ -95,16 +105,32 @@ protected:
 										  // fourth element : only for TEXTUREs, the pointer to the corresponding texture object
 										  {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 										  {1, TEXTURE, 0, &T_SlBody}});
-
+        // (HANDLE) for each model
 		M_SlHandle.init(this, MODEL_PATH + "SlotHandle.obj");
 		T_SlHandle.init(this, TEXTURE_PATH + "SlotHandle.png");
 		DS_SlHandle.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
 											{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 											{1, TEXTURE, 0, &T_SlHandle}});
         
+        // ---------------
+        
+        // (WHEELS) for each model
+        M_SlWheel.init(this, MODEL_PATH + "SlotWheel.obj");
+        T_SlWheel.init(this, TEXTURE_PATH + "SlotWheel.png");
+        DS_SlWheel1.init(this, &DSLobj, {
+                                            {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+                                            {1, TEXTURE, 0, &T_SlWheel}});
+        DS_SlWheel2.init(this, &DSLobj, {
+                                            {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+                                            {1, TEXTURE, 0, &T_SlWheel}});
+        DS_SlWheel3.init(this, &DSLobj, {
+                                            {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+                                            {1, TEXTURE, 0, &T_SlWheel}});
+        
+        
         // add a new init for the global DS
-        DS_global.init(this, &DSLglobal, {// it uses same layout but we set a different instance of it
-                                            {0, UNIFORM, sizeof(globalUniformBufferObject), nullptr}});
+        DS_global.init(this, &DSLglobal, {{0, UNIFORM, sizeof(globalUniformBufferObject), nullptr}});
+        // ---------------
 	}
 
 	// Here you destroy all the objects you created!
@@ -118,6 +144,12 @@ protected:
 		DS_SlHandle.cleanup();
 		T_SlHandle.cleanup();
 		M_SlHandle.cleanup();
+        // 3 wheels cleanup
+        DS_SlWheel1.cleanup();
+        DS_SlWheel2.cleanup();
+        DS_SlWheel3.cleanup();
+        T_SlWheel.cleanup();
+        M_SlWheel.cleanup();
         
         DS_global.cleanup();
 
@@ -159,6 +191,7 @@ protected:
 		// property .indices.size() of models, contains the number of triangles * 3 of the mesh.
 		vkCmdDrawIndexed(commandBuffer,
 						 static_cast<uint32_t>(M_SlBody.indices.size()), 1, 0, 0, 0);
+        //----------------
 
 		// MODEL OF Handle
 		VkBuffer vertexBuffersHandle[] = {M_SlHandle.vertexBuffer};
@@ -168,10 +201,37 @@ protected:
 							 VK_INDEX_TYPE_UINT32);
 		vkCmdBindDescriptorSets(commandBuffer,
 								VK_PIPELINE_BIND_POINT_GRAPHICS,
-								P1.pipelineLayout, 1, 1, &DS_SlHandle.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1
+								P1.pipelineLayout, 1, 1, &DS_SlHandle.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
 								0, nullptr);
 		vkCmdDrawIndexed(commandBuffer,
 						 static_cast<uint32_t>(M_SlHandle.indices.size()), 1, 0, 0, 0);
+        //----------------
+        
+        // MODEL OF Wheels
+        VkBuffer vertexBuffersWheels[] = {M_SlWheel.vertexBuffer};
+        VkDeviceSize offsetsWheels[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersWheels, offsetsWheels);
+        vkCmdBindIndexBuffer(commandBuffer, M_SlWheel.indexBuffer, 0,
+                             VK_INDEX_TYPE_UINT32);
+        vkCmdBindDescriptorSets(commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                P1.pipelineLayout, 1, 1, &DS_SlWheel1.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
+                                0, nullptr);
+        vkCmdDrawIndexed(commandBuffer,
+                         static_cast<uint32_t>(M_SlWheel.indices.size()), 1, 0, 0, 0);
+        vkCmdBindDescriptorSets(commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                P1.pipelineLayout, 1, 1, &DS_SlWheel2.descriptorSets[currentImage], //since 3 wheels (3 DS) we replicate this bind
+                                0, nullptr);
+        vkCmdDrawIndexed(commandBuffer,
+                         static_cast<uint32_t>(M_SlWheel.indices.size()), 1, 0, 0, 0);
+        vkCmdBindDescriptorSets(commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                P1.pipelineLayout, 1, 1, &DS_SlWheel3.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
+                                0, nullptr);
+        vkCmdDrawIndexed(commandBuffer,
+                         static_cast<uint32_t>(M_SlWheel.indices.size()), 1, 0, 0, 0);
+        //----------------
 	}
 
 	// Here is where you update the uniforms.
@@ -210,13 +270,36 @@ protected:
 		vkUnmapMemory(device, DS_SlBody.uniformBuffersMemory[0][currentImage]);
 		// ------------
 
-		// doing for every model or better for every (DS_)
+		// (HANDLE) doing for every model or better for every (DS_)
 		ubo.model = glm::translate(glm::mat4(1), glm::vec3(0.3f, 0.5f, -0.15f)); // you can modify your ubo for each DS before passing it
 		vkMapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage], 0,
 					sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
 		vkUnmapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage]);
 		// ------------
+        
+        // (WHEEL1) doing for every model or better for every (DS_)
+        ubo.model = glm::translate(glm::mat4(1), glm::vec3(-0.15f, 0.93f, -0.15f))
+        * glm::rotate(glm::mat4(1), time * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // you can modify your ubo for each DS before passing it
+        vkMapMemory(device, DS_SlWheel1.uniformBuffersMemory[0][currentImage], 0,
+                    sizeof(ubo), 0, &data);
+        memcpy(data, &ubo, sizeof(ubo));
+        vkUnmapMemory(device, DS_SlWheel1.uniformBuffersMemory[0][currentImage]);
+        // ------------
+        // (WHEEL2) doing for every model or better for every (DS_)
+        ubo.model = glm::translate(glm::mat4(1), glm::vec3(0.0f, 0.93f, -0.15f)); // you can modify your ubo for each DS before passing it
+        vkMapMemory(device, DS_SlWheel2.uniformBuffersMemory[0][currentImage], 0,
+                    sizeof(ubo), 0, &data);
+        memcpy(data, &ubo, sizeof(ubo));
+        vkUnmapMemory(device, DS_SlWheel2.uniformBuffersMemory[0][currentImage]);
+        // ------------
+        // (WHEEL3) doing for every model or better for every (DS_)
+        ubo.model = glm::translate(glm::mat4(1), glm::vec3(0.15f, 0.93f, -0.15f)); // you can modify your ubo for each DS before passing it
+        vkMapMemory(device, DS_SlWheel3.uniformBuffersMemory[0][currentImage], 0,
+                    sizeof(ubo), 0, &data);
+        memcpy(data, &ubo, sizeof(ubo));
+        vkUnmapMemory(device, DS_SlWheel3.uniformBuffersMemory[0][currentImage]);
+        // ------------
 	}
 };
 
