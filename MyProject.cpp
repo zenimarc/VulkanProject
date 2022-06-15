@@ -241,6 +241,36 @@ protected:
 		static auto startTime = std::chrono::high_resolution_clock::now();
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        
+        
+        // possible code to move an object after an interaction (going up and down like a platform or a sliding door)
+        float animationDuration = 1; // seconds of animation
+        static int isMoving = 0;
+        static auto interactionStartTime = std::chrono::high_resolution_clock::now();
+        static glm::vec3 handlePosStart = glm::vec3(0.3f, 0.5f, -0.15f);
+        static glm::vec3 handlePosEnd = glm::vec3(0.3f, 0.8f, -0.15f);
+        static glm::vec3 handlePos = handlePosStart;
+        if (!isMoving && glfwGetKey(window, GLFW_KEY_SPACE)) {
+            isMoving = 1;
+            interactionStartTime = std::chrono::high_resolution_clock::now();
+        }
+        if (isMoving){
+            float deltaTimeAnimation = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - interactionStartTime).count();
+            if (deltaTimeAnimation >= animationDuration) {
+                handlePos = handlePosEnd;
+                isMoving = 0;
+                glm::vec3 handlePosTemp = handlePosEnd;
+                handlePosEnd = handlePosStart;
+                handlePosStart = handlePosTemp;
+            } else {
+                handlePos = glm::vec3(handlePosStart[0] + ((handlePosEnd[0]-handlePosStart[0])/animationDuration)*deltaTimeAnimation,
+                                      handlePosStart[1] + ((handlePosEnd[1]-handlePosStart[1])/animationDuration)*deltaTimeAnimation,
+                                      handlePosStart[2] + ((handlePosEnd[2]-handlePosStart[2])/animationDuration)*deltaTimeAnimation);
+            }
+        }
+        // -------- interaction code --------------
+
+        
 
         void *data;
         
@@ -271,7 +301,7 @@ protected:
 		// ------------
 
 		// (HANDLE) doing for every model or better for every (DS_)
-		ubo.model = glm::translate(glm::mat4(1), glm::vec3(0.3f, 0.5f, -0.15f)); // you can modify your ubo for each DS before passing it
+		ubo.model = glm::translate(glm::mat4(1), handlePos); // you can modify your ubo for each DS before passing it
 		vkMapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage], 0,
 					sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
