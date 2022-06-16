@@ -15,11 +15,13 @@ struct globalUniformBufferObject
 {
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
+    alignas(16) float time;
 };
 
 struct UniformBufferObject
 {
 	alignas(16) glm::mat4 model;
+    alignas(16) int isFlowingColor;
 };
 
 // MAIN !
@@ -86,7 +88,7 @@ protected:
 							  // first  element : the binding number
 							  // second element : the time of element (buffer or texture)
 							  // third  element : the pipeline stage where it will be used
-							  {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT},
+							  {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS},
 							  {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT}});
 
 		// Descriptor Layouts [what will be passed to the shaders]
@@ -341,6 +343,7 @@ protected:
 									swapChainExtent.width / (float)swapChainExtent.height,
 									0.1f, 150.0f);
 		gubo.proj[1][1] *= -1;
+        gubo.time = glm::fract(time);
         
         // Global
         vkMapMemory(device, DS_global.uniformBuffersMemory[0][currentImage], 0,
@@ -348,6 +351,7 @@ protected:
         memcpy(data, &gubo, sizeof(gubo));
         vkUnmapMemory(device, DS_global.uniformBuffersMemory[0][currentImage]);
 
+        ubo.isFlowingColor = 0;
 		// doing for every model or better for every (DS_) -- HERE: SLBody --
 		// Here is where you actually update your uniforms
 		// uniformBuffersMemory[0] -> the 0 is the binding of the uniform you're going to change

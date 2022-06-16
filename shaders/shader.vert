@@ -3,10 +3,12 @@
 layout(set=0, binding = 0) uniform globalUniformBufferObject {
 	mat4 view;
 	mat4 proj;
+    float time;
 } gubo;
 
 layout(set=1, binding = 0) uniform UniformBufferObject {
     mat4 model;
+    int isFlowingColor;
 } ubo;
 
 layout(location = 0) in vec3 pos;
