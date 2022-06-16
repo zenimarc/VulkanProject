@@ -27,6 +27,10 @@ class MyProject : public BaseProject
 {
 protected:
 	// Here you list all the Vulkan objects you need:
+    float lookYaw = 0.0;
+    float lookPitch = 0.0;
+    float lookRoll = 0.0;
+    glm::vec3 RobotPos = glm::vec3(7.5f,1.0f,-9.0f);
 
 	// Descriptor Layouts [what will be passed to the shaders]
 	// which variable will be passed in a shader of which type and defines the bindings
@@ -95,8 +99,8 @@ protected:
 		P1.init(this, "shaders/vert.spv", "shaders/frag.spv", {&DSLglobal, &DSLobj}); //the first changes less freq while the last more frequently.
 
 		// Models, textures and Descriptors (values assigned to the uniforms)
-		M_SlBody.init(this, MODEL_PATH + "SlotBody.obj");
-		T_SlBody.init(this, TEXTURE_PATH + "SlotBody.png");
+		M_SlBody.init(this, MODEL_PATH + "cave.obj");
+		T_SlBody.init(this, TEXTURE_PATH + "block.png");
 		DS_SlBody.init(this, &DSLobj, {// the second parameter, is a pointer to the Uniform Set Layout of this set
 										  // the last parameter is an array, with one element per binding of the set.
 										  // first  elmenet : the binding number
@@ -239,11 +243,66 @@ protected:
 	void updateUniformBuffer(uint32_t currentImage)
 	{
 		static auto startTime = std::chrono::high_resolution_clock::now();
+        static float lastTime = 0.0f;
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        float deltaT = time - lastTime;
+        lastTime = time;
+        const float ROT_SPEED = glm::radians(60.0f);
+        const float MOVE_SPEED = 6.75f;
+        
+        static double old_xpos = 0, old_ypos = 0;
+        double xpos, ypos;
+        double m_dx = xpos - old_xpos;
+        double m_dy = ypos - old_ypos;
+        old_xpos = xpos; old_ypos = ypos;
+        
+        glm::vec3 oldRobotPos = RobotPos;
+        if(glfwGetKey(window, GLFW_KEY_LEFT)) {
+            lookYaw += deltaT * ROT_SPEED;
+        }
+        if(glfwGetKey(window, GLFW_KEY_RIGHT)) {
+            lookYaw -= deltaT * ROT_SPEED;
+        }
+        if(glfwGetKey(window, GLFW_KEY_UP)) {
+            lookPitch += deltaT * ROT_SPEED;
+        }
+        if(glfwGetKey(window, GLFW_KEY_DOWN)) {
+            lookPitch -= deltaT * ROT_SPEED;
+        }
+        if(glfwGetKey(window, GLFW_KEY_Q)) {
+            lookRoll -= deltaT * ROT_SPEED;
+        }
+        if(glfwGetKey(window, GLFW_KEY_E)) {
+            lookRoll += deltaT * ROT_SPEED;
+        }
+        if(glfwGetKey(window, GLFW_KEY_A)) {
+            RobotPos -= MOVE_SPEED * glm::vec3(glm::rotate(glm::mat4(1.0f), lookYaw,
+                                    glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(1,0,0,1)) * deltaT;
+        }
+        if(glfwGetKey(window, GLFW_KEY_D)) {
+            RobotPos += MOVE_SPEED * glm::vec3(glm::rotate(glm::mat4(1.0f), lookYaw,
+                                    glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(1,0,0,1)) * deltaT;
+        }
+        if(glfwGetKey(window, GLFW_KEY_W)) {
+            RobotPos -= MOVE_SPEED * glm::vec3(glm::rotate(glm::mat4(1.0f), lookYaw,
+                                    glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(0,0,1,1)) * deltaT;
+        }
+        if(glfwGetKey(window, GLFW_KEY_S)) {
+            RobotPos += MOVE_SPEED * glm::vec3(glm::rotate(glm::mat4(1.0f), lookYaw,
+                                    glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(0,0,1,1)) * deltaT;
+        }
+        if(glfwGetKey(window, GLFW_KEY_F)) {
+            RobotPos += MOVE_SPEED * glm::vec3(0.0f, deltaT, 0.0f);
+        }
+        std::cout << std::to_string(RobotPos[0]);
+        std::cout << std::to_string(RobotPos[1]);
+        std::cout << std::to_string(RobotPos[2]);
+        std::cout << "\n";
         
         
-        // possible code to move an object after an interaction (going up and down like a platform or a sliding door)
+        
+        // possible code to move an object after an interaction (going up and down like a platform)
         float animationDuration = 1; // seconds of animation
         static int isMoving = 0;
         static auto interactionStartTime = std::chrono::high_resolution_clock::now();
@@ -268,20 +327,19 @@ protected:
                                       handlePosStart[2] + ((handlePosEnd[2]-handlePosStart[2])/animationDuration)*deltaTimeAnimation);
             }
         }
-        // -------- interaction code --------------
+        // ------------------- animation code
 
+        
         
 
         void *data;
         
 		globalUniformBufferObject gubo{};
         UniformBufferObject ubo{};
-		gubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
-							   glm::vec3(0.0f, 0.0f, 0.0f),
-							   glm::vec3(0.0f, 1.0f, 0.0f));
+        gubo.view = LookInDirMat(RobotPos, glm::vec3(lookYaw, lookPitch, lookRoll));
 		gubo.proj = glm::perspective(glm::radians(45.0f),
 									swapChainExtent.width / (float)swapChainExtent.height,
-									0.1f, 10.0f);
+									0.1f, 150.0f);
 		gubo.proj[1][1] *= -1;
         
         // Global
