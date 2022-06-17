@@ -27,7 +27,7 @@ void main() {
     vec3 flowingColor = ubo.isFlowingColor * (a + b * cos( 2*3.14*(c*gubo.time+d)));
     
     const vec3  diffColor = texture(texSampler, fragTexCoord).rgb;
-    const vec3  ambientColor = vec3(0.7f, 0.7f, 0.7f);
+    const vec3  ambientColor = vec3(0.3f, 0.3f, 0.3f);
 	const vec3  specColor = vec3(1.0f, 1.0f, 1.0f);
 	const float specPower = 150.0f;
 	const vec3  L = vec3(-0.4830f, 0.8365f, -0.2588f); // light direction

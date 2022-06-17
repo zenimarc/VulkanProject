@@ -29,7 +29,7 @@ class MyProject : public BaseProject
 {
 protected:
 	// Here you list all the Vulkan objects you need:
-    float lookYaw = 0.0;
+    float lookYaw = 3.0;
     float lookPitch = 0.0;
     float lookRoll = 0.0;
     glm::vec3 RobotPos = glm::vec3(7.5f,1.0f,-9.0f);
@@ -112,8 +112,8 @@ protected:
 										  {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 										  {1, TEXTURE, 0, &T_SlBody}});
         // (HANDLE) for each model
-		M_SlHandle.init(this, MODEL_PATH + "SlotHandle.obj");
-		T_SlHandle.init(this, TEXTURE_PATH + "SlotHandle.png");
+		M_SlHandle.init(this, MODEL_PATH + "block.obj");
+		T_SlHandle.init(this, TEXTURE_PATH + "redBrick.png");
 		DS_SlHandle.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
 											{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 											{1, TEXTURE, 0, &T_SlHandle}});
@@ -297,25 +297,27 @@ protected:
         if(glfwGetKey(window, GLFW_KEY_F)) {
             RobotPos += MOVE_SPEED * glm::vec3(0.0f, deltaT, 0.0f);
         }
-        std::cout << std::to_string(RobotPos[0]);
-        std::cout << std::to_string(RobotPos[1]);
-        std::cout << std::to_string(RobotPos[2]);
-        std::cout << "\n";
+        //std::cout << std::to_string(RobotPos[0]);
+        //std::cout << std::to_string(RobotPos[1]);
+        //std::cout << std::to_string(RobotPos[2]);
+        //std::cout << "\n";
         
         
         
         // possible code to move an object after an interaction (going up and down like a platform)
-        float animationDuration = 1; // seconds of animation
+        float animationDuration = 2; // seconds of animation
         static int isMoving = 0;
         static auto interactionStartTime = std::chrono::high_resolution_clock::now();
-        static glm::vec3 handlePosStart = glm::vec3(0.3f, 0.5f, -0.15f);
-        static glm::vec3 handlePosEnd = glm::vec3(0.3f, 0.8f, -0.15f);
+        static glm::vec3 handlePosStart = glm::vec3(0.0f, -1.90f, 0.1f);
+        static glm::vec3 handlePosEnd = glm::vec3(0.0f, 8.0f, 0.1f);
         static glm::vec3 handlePos = handlePosStart;
         if (!isMoving && glfwGetKey(window, GLFW_KEY_SPACE)) {
+            std::cout << isCameraOnPlatform(getVerticesOfPlatform(0), RobotPos);
             isMoving = 1;
             interactionStartTime = std::chrono::high_resolution_clock::now();
         }
         if (isMoving){
+            bool cameraNeedToMove = isCameraOnPlatform(getVerticesOfPlatform(0), RobotPos);
             float deltaTimeAnimation = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - interactionStartTime).count();
             if (deltaTimeAnimation >= animationDuration) {
                 handlePos = handlePosEnd;
@@ -327,6 +329,10 @@ protected:
                 handlePos = glm::vec3(handlePosStart[0] + ((handlePosEnd[0]-handlePosStart[0])/animationDuration)*deltaTimeAnimation,
                                       handlePosStart[1] + ((handlePosEnd[1]-handlePosStart[1])/animationDuration)*deltaTimeAnimation,
                                       handlePosStart[2] + ((handlePosEnd[2]-handlePosStart[2])/animationDuration)*deltaTimeAnimation);
+                if (cameraNeedToMove) {
+                    float height_diff = handlePosEnd[1] - handlePosStart[1];
+                    RobotPos[1] += (height_diff/animationDuration)*deltaT;
+                }
             }
         }
         // ------------------- animation code
