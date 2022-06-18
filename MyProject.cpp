@@ -16,6 +16,7 @@ struct globalUniformBufferObject
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
     alignas(16) float time;
+    alignas(16) glm::vec3 eyePos;
 };
 
 struct UniformBufferObject
@@ -297,10 +298,10 @@ protected:
         if(glfwGetKey(window, GLFW_KEY_F)) {
             RobotPos += MOVE_SPEED * glm::vec3(0.0f, deltaT, 0.0f);
         }
-        //std::cout << std::to_string(RobotPos[0]);
-        //std::cout << std::to_string(RobotPos[1]);
-        //std::cout << std::to_string(RobotPos[2]);
-        //std::cout << "\n";
+        std::cout << std::to_string(RobotPos[0]) << " ";
+        std::cout << std::to_string(RobotPos[1])<< " ";
+        std::cout << std::to_string(RobotPos[2])<< " ";
+        std::cout << "\n";
         
         
         
@@ -350,6 +351,7 @@ protected:
 									0.1f, 150.0f);
 		gubo.proj[1][1] *= -1;
         gubo.time = glm::fract(time);
+        gubo.eyePos = RobotPos;
         
         // Global
         vkMapMemory(device, DS_global.uniformBuffersMemory[0][currentImage], 0,
