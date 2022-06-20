@@ -17,6 +17,8 @@ struct globalUniformBufferObject
 	alignas(16) glm::mat4 proj;
     alignas(16) float time;
     alignas(16) glm::vec3 eyePos;
+    alignas(16) glm::vec4 coneInOutDecayExp;
+    alignas(16) glm::vec3 cameraDir;
 };
 
 struct UniformBufferObject
@@ -298,10 +300,10 @@ protected:
         if(glfwGetKey(window, GLFW_KEY_F)) {
             RobotPos += MOVE_SPEED * glm::vec3(0.0f, deltaT, 0.0f);
         }
-        std::cout << std::to_string(RobotPos[0]) << " ";
-        std::cout << std::to_string(RobotPos[1])<< " ";
-        std::cout << std::to_string(RobotPos[2])<< " ";
-        std::cout << "\n";
+        if(glfwGetKey(window, GLFW_KEY_G)) {
+            RobotPos -= MOVE_SPEED * glm::vec3(0.0f, deltaT, 0.0f);
+        }
+        std::cout << std::to_string(RobotPos[0]) << " " << std::to_string(RobotPos[1])<< " " << std::to_string(RobotPos[2])<< " " << "\n";
         
         
         
@@ -352,6 +354,13 @@ protected:
 		gubo.proj[1][1] *= -1;
         gubo.time = glm::fract(time);
         gubo.eyePos = RobotPos;
+        gubo.coneInOutDecayExp = glm::vec4(0.0f, 0.3f, 2.0f, 2.0f);
+        float direction_x = cos((lookYaw)) * cos((lookPitch));
+        float direction_y = sin((lookPitch));
+        float direction_z = sin((lookYaw)) * cos((lookPitch));
+        gubo.cameraDir = glm::normalize(glm::vec3(direction_x, direction_y, direction_z));
+        std::cout << gubo.cameraDir[0] << " " << gubo.cameraDir[1] << " " << gubo.cameraDir[2] << "\n";
+        
         
         // Global
         vkMapMemory(device, DS_global.uniformBuffersMemory[0][currentImage], 0,

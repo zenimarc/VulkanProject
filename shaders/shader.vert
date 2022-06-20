@@ -5,6 +5,8 @@ layout(set=0, binding = 0) uniform globalUniformBufferObject {
 	mat4 proj;
     float time;
     vec3 eyePos;
+    vec3 cameraDir;
+    vec4 coneInOutDecayExp;
 } gubo;
 
 layout(set=1, binding = 0) uniform UniformBufferObject {

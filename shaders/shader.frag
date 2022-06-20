@@ -7,6 +7,8 @@ layout(set=0, binding = 0) uniform globalUniformBufferObject {
     mat4 proj;
     float time;
     vec3 eyePos;
+    vec3 cameraDir;
+    vec4 coneInOutDecayExp;
 } gubo;
 
 layout(set=1, binding = 0) uniform UniformBufferObject {
@@ -31,10 +33,25 @@ vec3 point_light_dir(vec3 pos, vec3 lightPos) {
 vec3 point_light_color(vec3 pos, vec3 lightPos) {
     // Point light color
     vec3 lightColor = vec3(0.964f, 0.603f, 0.329f);
-    float g = 5.0f;
+    float g = 12.0f;
     float beta = 1.0f;
     return lightColor * pow((g/(length(lightPos-pos))), beta);
 }
+
+vec3 spot_light_color(vec3 pos, vec3 lightPos, vec3 lightDir) {
+    // Spot light color
+    // c_out: cosine of the outer angle
+    // c_in: cosine of the inner angle
+    vec3 lightColor = vec3(0.964f, 0.603f, 0.329f);
+    //vec3 lightPos = vec3(0.0f, 7.5f, 0.0f);
+    //vec3 lightDir = vec3(0.0f, -1.0f, 0.0f);
+    float c_out = gubo.coneInOutDecayExp.x;
+    float c_in = gubo.coneInOutDecayExp.y;
+    float decayTerm = pow((gubo.coneInOutDecayExp.z/length(lightPos-pos)), gubo.coneInOutDecayExp.w);
+    float termToBeClamped = (dot(normalize(lightPos - pos), lightDir)-c_out)/(c_in-c_out);
+    return (lightColor * decayTerm) * clamp(termToBeClamped, 0, 1);
+}
+
 
 void main() {
     vec3 a = vec3(0.5, 0.5, 0.5);
@@ -45,27 +62,42 @@ void main() {
     
     const vec3  diffColor = texture(texSampler, fragTexCoord).rgb;
     const vec3  ambientColor = vec3(0.1f, 0.1f, 0.1f);
-	const vec3  specColor = vec3(0.964f, 0.603f, 0.329f);
-	const float specPower = 150.0f;
-	const vec3  L = vec3(-0.4830f, 0.8365f, -0.2588f); // light direction
-	
-	vec3 N = normalize(fragNorm); // Normal vector
-	vec3 R = -reflect(L, N); // Reflected vector (used for specular)
-	vec3 V = normalize(fragViewDir);  // View direction
-	
-    //point light 1
-    vec3 p1_pos = vec3(4.20f, 12.70f, 0.37f);
-    vec3 lD = point_light_dir(fragPos, p1_pos);
-    vec3 p1_color = point_light_color(fragPos, p1_pos);
-    vec3 p1_specular = specColor * pow(max(dot(-reflect(lD, N),V), 0.0f), specPower);
-    vec3 p1_diffuse = p1_color * diffColor * max(dot(N,lD), 0.0f);
+    const vec3  specColor = vec3(0.964f, 0.603f, 0.329f);
+    const float specPower = 150.0f;
+    const vec3  L = vec3(-0.4830f, 0.8365f, -0.2588f); // light direction
     
-	// Lambert diffuse
-	vec3 diffuse  = diffColor * max(dot(N,L), 0.0f);
-	// Phong specular
-	vec3 specular = specColor * pow(max(dot(R,V), 0.0f), specPower);
-	// ambient
-	vec3 ambient  = ambientColor * diffColor;
-	
-	outColor = vec4(clamp(ambient + p1_diffuse + p1_specular + 0.7*flowingColor, vec3(0.0f), vec3(1.0f)), 1.0f);
+    vec3 N = normalize(fragNorm); // Normal vector
+    vec3 R = -reflect(L, N); // Reflected vector (used for specular)
+    vec3 V = normalize(fragViewDir);  // View direction
+    vec3 eyeDir = normalize(gubo.eyePos.xyz - fragPos);
+    
+    // Lambert diffuse
+    vec3 diffuse  = diffColor * max(dot(N,L), 0.0f);
+    // Phong specular
+    vec3 specular = specColor * pow(max(dot(R,V), 0.0f), specPower);
+    // ambient
+    vec3 ambient  = ambientColor * diffColor;
+    
+    //point light 1
+    //vec3 p1_pos = vec3(4.20f, 12.70f, 0.37f);
+    vec3 p1_pos = gubo.eyePos;
+    vec3 p1_lD = point_light_dir(fragPos, p1_pos);
+    vec3 p1_color = point_light_color(fragPos, p1_pos);
+    vec3 p1_specular = specColor * pow(max(dot(-reflect(p1_lD, N),V), 0.0f), specPower);
+    vec3 p1_diffuse = diffColor * max(dot(N,p1_lD), 0.0f);
+    vec3 p1_final = p1_color * (p1_diffuse);
+    
+    //spot light 1 at camera pos
+    //vec3 p1_pos = vec3(4.20f, 12.70f, 0.37f);
+    //vec3 sp1_lD = gubo.cameraDir;
+    vec3 sp1_lD = L;
+    vec3 sp1_pos = vec3(4.47f, 5.89f, 1.32f);
+    vec3 sp1_lx = point_light_dir(fragPos, sp1_pos);
+    vec3 sp1_color = spot_light_color(fragPos, sp1_pos, sp1_lD);
+    vec3 sp1_specular = specColor * pow(max(dot(-reflect(sp1_lx, N),V), 0.0f), specPower);
+    vec3 sp1_diffuse = diffColor * max(dot(N,sp1_lx), 0.0f);
+    vec3 sp1_final = sp1_color * (sp1_diffuse + sp1_specular);
+
+    
+    outColor = vec4(clamp(0.2f*ambient + 1.2*p1_final + 0.7*flowingColor, vec3(0.0f), vec3(1.0f)), 1.0f);
 }
