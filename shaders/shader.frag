@@ -62,7 +62,7 @@ void main() {
     
     const vec3  diffColor = texture(texSampler, fragTexCoord).rgb;
     const vec3  ambientColor = vec3(0.1f, 0.1f, 0.1f);
-    const vec3  specColor = vec3(0.964f, 0.603f, 0.329f);
+    const vec3  specColor = vec3(1.0f, 1.0f, 1.0f);
     const float specPower = 150.0f;
     const vec3  L = vec3(-0.4830f, 0.8365f, -0.2588f); // light direction
     
@@ -85,7 +85,7 @@ void main() {
     vec3 p1_color = point_light_color(fragPos, p1_pos);
     vec3 p1_specular = specColor * pow(max(dot(-reflect(p1_lD, N),V), 0.0f), specPower);
     vec3 p1_diffuse = diffColor * max(dot(N,p1_lD), 0.0f);
-    vec3 p1_final = p1_color * (p1_diffuse);
+    vec3 p1_final = p1_color * (p1_diffuse + p1_specular);
     
     //spot light 1 at camera pos
     //vec3 p1_pos = vec3(4.20f, 12.70f, 0.37f);

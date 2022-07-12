@@ -57,6 +57,10 @@ protected:
 	DescriptorSet DS_SlHandle; // instances of DSLobj
     // ---------
     
+    Model M_Door;
+    Texture T_Door;
+    DescriptorSet DS_Door; // instances of DSLobj
+    
     // for each model (WHEELS)
     Model M_SlWheel;
     Texture T_SlWheel;
@@ -78,9 +82,9 @@ protected:
 		initialBackgroundColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 		// Descriptor pool sizes
-		uniformBlocksInPool = 6; // how many descriptor set you're going to use
-		texturesInPool = 5;
-		setsInPool = 6; //handle, body, global for now + 3 wheels
+		uniformBlocksInPool = 7; // how many descriptor set you're going to use
+		texturesInPool = 6;
+		setsInPool = 7; //handle, body, global for now + 3 wheels
 	}
 
 	// Here you load and setup all your Vulkan objects
@@ -104,7 +108,7 @@ protected:
 		P1.init(this, "shaders/vert.spv", "shaders/frag.spv", {&DSLglobal, &DSLobj}); //the first changes less freq while the last more frequently.
 
 		// Models, textures and Descriptors (values assigned to the uniforms)
-		M_SlBody.init(this, MODEL_PATH + "cave.obj");
+		M_SlBody.init(this, MODEL_PATH + "newcave.obj");
 		T_SlBody.init(this, TEXTURE_PATH + "block.png");
 		DS_SlBody.init(this, &DSLobj, {// the second parameter, is a pointer to the Uniform Set Layout of this set
 										  // the last parameter is an array, with one element per binding of the set.
@@ -122,6 +126,12 @@ protected:
 											{1, TEXTURE, 0, &T_SlHandle}});
         
         // ---------------
+        
+        M_Door.init(this, MODEL_PATH + "door.obj");
+        T_Door.init(this, TEXTURE_PATH + "redBrick.png");
+        DS_Door.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
+                                            {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+                                            {1, TEXTURE, 0, &T_Door}});
         
         // (WHEELS) for each model
         M_SlWheel.init(this, MODEL_PATH + "SlotWheel.obj");
@@ -153,6 +163,10 @@ protected:
 		DS_SlHandle.cleanup();
 		T_SlHandle.cleanup();
 		M_SlHandle.cleanup();
+        // door cleanup
+        DS_Door.cleanup();
+        T_Door.cleanup();
+        M_Door.cleanup();
         // 3 wheels cleanup
         DS_SlWheel1.cleanup();
         DS_SlWheel2.cleanup();
@@ -182,7 +196,7 @@ protected:
                                 0, nullptr);
 
 		// MODEL OF BODY
-		VkBuffer vertexBuffers[] = {M_SlBody.vertexBuffer}; // possibly add more vertexBuffers
+		VkBuffer vertexBuffers[] = {M_SlBody.vertexBuffer};
 		// property .vertexBuffer of models, contains the VkBuffer handle to its vertex buffer
 		VkDeviceSize offsets[] = {0};
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
@@ -214,6 +228,20 @@ protected:
 								0, nullptr);
 		vkCmdDrawIndexed(commandBuffer,
 						 static_cast<uint32_t>(M_SlHandle.indices.size()), 1, 0, 0, 0);
+        //----------------
+        
+        // MODEL OF Door
+        VkBuffer vertexBuffersDoor[] = {M_Door.vertexBuffer};
+        VkDeviceSize offsetsDoor[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersDoor, offsetsDoor);
+        vkCmdBindIndexBuffer(commandBuffer, M_Door.indexBuffer, 0,
+                             VK_INDEX_TYPE_UINT32);
+        vkCmdBindDescriptorSets(commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                P1.pipelineLayout, 1, 1, &DS_Door.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
+                                0, nullptr);
+        vkCmdDrawIndexed(commandBuffer,
+                         static_cast<uint32_t>(M_Door.indices.size()), 1, 0, 0, 0);
         //----------------
         
         // MODEL OF Wheels
@@ -386,6 +414,14 @@ protected:
 		memcpy(data, &ubo, sizeof(ubo));
 		vkUnmapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage]);
 		// ------------
+        
+        // (DOOR) doing for every model or better for every (DS_)
+        ubo.model = glm::mat4(1.0); // you can modify your ubo for each DS before passing it
+        vkMapMemory(device, DS_Door.uniformBuffersMemory[0][currentImage], 0,
+                    sizeof(ubo), 0, &data);
+        memcpy(data, &ubo, sizeof(ubo));
+        vkUnmapMemory(device, DS_Door.uniformBuffersMemory[0][currentImage]);
+        // ------------
         
         // (WHEEL1) doing for every model or better for every (DS_)
         ubo.model = glm::translate(glm::mat4(1), glm::vec3(-0.15f, 0.93f, -0.15f))
