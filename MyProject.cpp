@@ -25,6 +25,7 @@ struct UniformBufferObject
 {
 	alignas(16) glm::mat4 model;
     alignas(16) int isFlowingColor;
+    alignas(16) glm::vec3 highlightColor;
 };
 
 // MAIN !
@@ -35,7 +36,11 @@ protected:
     float lookYaw = 3.0;
     float lookPitch = 0.0;
     float lookRoll = 0.0;
-    glm::vec3 RobotPos = glm::vec3(7.5f,1.0f,-9.0f);
+    glm::vec3 RobotPos = glm::vec3(11.0f,1.0f,-25.0f);
+    glm::vec3 highLightColors[5] = {glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, 0.5, 1.0), glm::vec3(0.4, 0.1, 1.0)};
+    int colorSelectorToUnlock = 0;
+    int colorSelFreezed = -1;
+    bool doorUnlocked = false;
 
 	// Descriptor Layouts [what will be passed to the shaders]
 	// which variable will be passed in a shader of which type and defines the bindings
@@ -61,6 +66,10 @@ protected:
     Texture T_Door;
     DescriptorSet DS_Door; // instances of DSLobj
     
+    Model M_IntBlock;
+    Texture T_IntBlock;
+    DescriptorSet DS_IntBlock; // instances of DSLobj
+    
     // for each model (WHEELS)
     Model M_SlWheel;
     Texture T_SlWheel;
@@ -82,9 +91,9 @@ protected:
 		initialBackgroundColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 		// Descriptor pool sizes
-		uniformBlocksInPool = 7; // how many descriptor set you're going to use
-		texturesInPool = 6;
-		setsInPool = 7; //handle, body, global for now + 3 wheels
+		uniformBlocksInPool = 8; // how many descriptor set you're going to use
+		texturesInPool = 7;
+		setsInPool = 8; //handle, body, global for now + 3 wheels
 	}
 
 	// Here you load and setup all your Vulkan objects
@@ -127,6 +136,12 @@ protected:
         
         // ---------------
         
+        M_IntBlock.init(this, MODEL_PATH + "block.obj");
+        T_IntBlock.init(this, TEXTURE_PATH + "block.png");
+        DS_IntBlock.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
+                                            {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+                                            {1, TEXTURE, 0, &T_IntBlock}});
+        
         M_Door.init(this, MODEL_PATH + "door.obj");
         T_Door.init(this, TEXTURE_PATH + "redBrick.png");
         DS_Door.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
@@ -163,6 +178,10 @@ protected:
 		DS_SlHandle.cleanup();
 		T_SlHandle.cleanup();
 		M_SlHandle.cleanup();
+        // interactive block cleanup
+        DS_IntBlock.cleanup();
+        T_IntBlock.cleanup();
+        M_IntBlock.cleanup();
         // door cleanup
         DS_Door.cleanup();
         T_Door.cleanup();
@@ -230,6 +249,20 @@ protected:
 						 static_cast<uint32_t>(M_SlHandle.indices.size()), 1, 0, 0, 0);
         //----------------
         
+        // MODEL OF Interactive Block
+        VkBuffer vertexBuffersIntBlock[] = {M_IntBlock.vertexBuffer};
+        VkDeviceSize offsetsIntBlock[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersIntBlock, offsetsIntBlock);
+        vkCmdBindIndexBuffer(commandBuffer, M_IntBlock.indexBuffer, 0,
+                             VK_INDEX_TYPE_UINT32);
+        vkCmdBindDescriptorSets(commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                P1.pipelineLayout, 1, 1, &DS_IntBlock.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
+                                0, nullptr);
+        vkCmdDrawIndexed(commandBuffer,
+                         static_cast<uint32_t>(M_IntBlock.indices.size()), 1, 0, 0, 0);
+        //----------------
+        
         // MODEL OF Door
         VkBuffer vertexBuffersDoor[] = {M_Door.vertexBuffer};
         VkDeviceSize offsetsDoor[] = {0};
@@ -281,7 +314,7 @@ protected:
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         float deltaT = time - lastTime;
         lastTime = time;
-        const float ROT_SPEED = glm::radians(60.0f);
+        const float ROT_SPEED = glm::radians(90.0f);
         const float MOVE_SPEED = 6.75f;
         
         static double old_xpos = 0, old_ypos = 0;
@@ -367,6 +400,44 @@ protected:
             }
         }
         // ------------------- animation code
+        
+        // Animation of door
+        // possible code to move an object after an interaction (DOOR)
+        int selColor = (int)std::floor(time) % 5;
+        static int doorIsMoving = 0;
+        static int blockColorFlowing = 1;
+        static glm::vec3 doorPosStart = glm::vec3(0.0f, 0.0f, 0.0f);
+        static glm::vec3 doorPosEnd = glm::vec3(0.0f, -8.0f, 0.0f);
+        static glm::vec3 doorPos = doorPosStart;
+        bool isOnIntBlock = isCameraOnPlatform(getVerticesOfIntBlock(), RobotPos);
+        bool isOnRightColor = colorSelectorToUnlock == colorSelFreezed;
+        if (!doorIsMoving && isOnIntBlock && isOnRightColor && !doorUnlocked) {
+            doorIsMoving = 1;
+            doorUnlocked = true;
+            interactionStartTime = std::chrono::high_resolution_clock::now();
+        }
+        if (isOnIntBlock && blockColorFlowing) {
+            colorSelFreezed = selColor;
+            blockColorFlowing = 0;
+        }
+        if (!isOnIntBlock && !doorUnlocked){
+            blockColorFlowing = 1;
+        }
+        if (doorIsMoving){
+            float deltaTimeAnimation = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - interactionStartTime).count();
+            if (deltaTimeAnimation >= animationDuration) {
+                doorPos = doorPosEnd;
+                doorIsMoving = 0;
+                glm::vec3 doorPosTemp = doorPosEnd;
+                doorPosEnd = doorPosStart;
+                doorPosStart = doorPosTemp;
+            } else {
+                doorPos = glm::vec3(doorPosStart[0] + ((doorPosEnd[0]-doorPosStart[0])/animationDuration)*deltaTimeAnimation,
+                                      doorPosStart[1] + ((doorPosEnd[1]-doorPosStart[1])/animationDuration)*deltaTimeAnimation,
+                                      doorPosStart[2] + ((doorPosEnd[2]-doorPosStart[2])/animationDuration)*deltaTimeAnimation);
+            }
+        }
+        // ------------------- animation code
 
         
         
@@ -415,8 +486,24 @@ protected:
 		vkUnmapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage]);
 		// ------------
         
+        // (INTBLOCK) doing for every model or better for every (DS_)
+        ubo.model = glm::translate(glm::mat4(1), glm::vec3(-26.0, -1.8, 33.0)) *
+                    glm::scale(glm::mat4(1), glm::vec3(0.5, 0.5, 0.5)); // you can modify your ubo for each DS before passing it
+        ubo.isFlowingColor = 0;
+        ubo.highlightColor = highLightColors[selColor];
+        if (doorUnlocked || !blockColorFlowing) {
+            ubo.highlightColor = highLightColors[colorSelFreezed];
+        }
+        vkMapMemory(device, DS_IntBlock.uniformBuffersMemory[0][currentImage], 0,
+                    sizeof(ubo), 0, &data);
+        memcpy(data, &ubo, sizeof(ubo));
+        vkUnmapMemory(device, DS_IntBlock.uniformBuffersMemory[0][currentImage]);
+        ubo.highlightColor = glm::vec3(0.0, 0.0, 0.0); //set back to null highlight
+        // ------------
+        
         // (DOOR) doing for every model or better for every (DS_)
-        ubo.model = glm::mat4(1.0); // you can modify your ubo for each DS before passing it
+        ubo.isFlowingColor = 0;
+        ubo.model = glm::translate(glm::mat4(1), doorPos); // you can modify your ubo for each DS before passing it
         vkMapMemory(device, DS_Door.uniformBuffersMemory[0][currentImage], 0,
                     sizeof(ubo), 0, &data);
         memcpy(data, &ubo, sizeof(ubo));

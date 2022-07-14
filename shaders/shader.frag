@@ -14,6 +14,7 @@ layout(set=0, binding = 0) uniform globalUniformBufferObject {
 layout(set=1, binding = 0) uniform UniformBufferObject {
     mat4 model;
     int isFlowingColor;
+    vec3 highlightColor;
 } ubo;
 
 layout(location = 0) in vec3 fragViewDir;
@@ -85,7 +86,7 @@ void main() {
     vec3 p1_color = point_light_color(fragPos, p1_pos);
     vec3 p1_specular = specColor * pow(max(dot(-reflect(p1_lD, N),V), 0.0f), specPower);
     vec3 p1_diffuse = diffColor * max(dot(N,p1_lD), 0.0f);
-    vec3 p1_final = p1_color * (p1_diffuse + p1_specular);
+    vec3 p1_final = p1_color * (p1_diffuse);
     
     //spot light 1 at camera pos
     //vec3 p1_pos = vec3(4.20f, 12.70f, 0.37f);
@@ -99,5 +100,5 @@ void main() {
     vec3 sp1_final = sp1_color * (sp1_diffuse + sp1_specular);
 
     
-    outColor = vec4(clamp(0.2f*ambient + 1.2*p1_final + 0.7*flowingColor, vec3(0.0f), vec3(1.0f)), 1.0f);
+    outColor = vec4(clamp(0.2f*ambient + 1.2*p1_final + 0.7*flowingColor + 0.5*ubo.highlightColor, vec3(0.0f), vec3(1.0f)), 1.0f);
 }

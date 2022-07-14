@@ -2144,9 +2144,19 @@ VerticesOfPlatform getVerticesOfPlatform(int n){
     return plat1;
 }
 
+VerticesOfPlatform getVerticesOfIntBlock(){
+    VerticesOfPlatform plat1;
+    plat1.v1 = glm::vec2(-25.0f, 33.0f);
+    plat1.v2 = glm::vec2(-25.0f, 37.0f);
+    plat1.v3 = glm::vec2(-20.0f, 37.0f);
+    plat1.v4 = glm::vec2(-20.0f, 33.0f);
+    return plat1;
+}
+
 bool isCameraOnPlatform(VerticesOfPlatform plat, glm::vec3 camera_pos) {
     Point polygon1[] = {{plat.v1[0], plat.v1[1]}, {plat.v2[0], plat.v2[1]}, {plat.v3[0], plat.v3[1]}, {plat.v4[0], plat.v4[1]}};
     int n = sizeof(polygon1)/sizeof(polygon1[0]);
     Point p = {camera_pos[0], camera_pos[2]};
     return isInside(polygon1, n, p);
 }
+
