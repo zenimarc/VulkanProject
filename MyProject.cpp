@@ -70,6 +70,10 @@ protected:
     Texture T_IntBlock;
     DescriptorSet DS_IntBlock; // instances of DSLobj
     
+    Model M_Hint;
+    Texture T_Hint;
+    DescriptorSet DS_Hint; // instances of DSLobj
+    
     // for each model (WHEELS)
     Model M_SlWheel;
     Texture T_SlWheel;
@@ -85,15 +89,15 @@ protected:
 	void setWindowParameters()
 	{
 		// window size, titile and initial background
-		windowWidth = 800;
-		windowHeight = 600;
+		windowWidth = 1024;
+		windowHeight = 768;
 		windowTitle = "My Project";
 		initialBackgroundColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 		// Descriptor pool sizes
-		uniformBlocksInPool = 8; // how many descriptor set you're going to use
-		texturesInPool = 7;
-		setsInPool = 8; //handle, body, global for now + 3 wheels
+		uniformBlocksInPool = 6; // how many descriptor set you're going to use
+		texturesInPool = 5;
+		setsInPool = 6; //handle, body, global for now + 3 wheels
 	}
 
 	// Here you load and setup all your Vulkan objects
@@ -143,23 +147,16 @@ protected:
                                             {1, TEXTURE, 0, &T_IntBlock}});
         
         M_Door.init(this, MODEL_PATH + "door.obj");
-        T_Door.init(this, TEXTURE_PATH + "redBrick.png");
+        T_Door.init(this, TEXTURE_PATH + "block.png");
         DS_Door.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
                                             {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
                                             {1, TEXTURE, 0, &T_Door}});
         
-        // (WHEELS) for each model
-        M_SlWheel.init(this, MODEL_PATH + "SlotWheel.obj");
-        T_SlWheel.init(this, TEXTURE_PATH + "SlotWheel.png");
-        DS_SlWheel1.init(this, &DSLobj, {
+        M_Hint.init(this, MODEL_PATH + "hint.obj");
+        T_Hint.init(this, TEXTURE_PATH + "hint.png");
+        DS_Hint.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
                                             {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-                                            {1, TEXTURE, 0, &T_SlWheel}});
-        DS_SlWheel2.init(this, &DSLobj, {
-                                            {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-                                            {1, TEXTURE, 0, &T_SlWheel}});
-        DS_SlWheel3.init(this, &DSLobj, {
-                                            {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-                                            {1, TEXTURE, 0, &T_SlWheel}});
+                                            {1, TEXTURE, 0, &T_Hint}});
         
         
         // add a new init for the global DS
@@ -186,12 +183,10 @@ protected:
         DS_Door.cleanup();
         T_Door.cleanup();
         M_Door.cleanup();
-        // 3 wheels cleanup
-        DS_SlWheel1.cleanup();
-        DS_SlWheel2.cleanup();
-        DS_SlWheel3.cleanup();
-        T_SlWheel.cleanup();
-        M_SlWheel.cleanup();
+        // hint cleanup
+        DS_Hint.cleanup();
+        T_Hint.cleanup();
+        M_Hint.cleanup();
         
         DS_global.cleanup();
 
@@ -277,30 +272,18 @@ protected:
                          static_cast<uint32_t>(M_Door.indices.size()), 1, 0, 0, 0);
         //----------------
         
-        // MODEL OF Wheels
-        VkBuffer vertexBuffersWheels[] = {M_SlWheel.vertexBuffer};
-        VkDeviceSize offsetsWheels[] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersWheels, offsetsWheels);
-        vkCmdBindIndexBuffer(commandBuffer, M_SlWheel.indexBuffer, 0,
+        // MODEL OF Hint
+        VkBuffer vertexBuffersHint[] = {M_Hint.vertexBuffer};
+        VkDeviceSize offsetsHint[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersHint, offsetsHint);
+        vkCmdBindIndexBuffer(commandBuffer, M_Hint.indexBuffer, 0,
                              VK_INDEX_TYPE_UINT32);
         vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                P1.pipelineLayout, 1, 1, &DS_SlWheel1.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
+                                P1.pipelineLayout, 1, 1, &DS_Hint.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
                                 0, nullptr);
         vkCmdDrawIndexed(commandBuffer,
-                         static_cast<uint32_t>(M_SlWheel.indices.size()), 1, 0, 0, 0);
-        vkCmdBindDescriptorSets(commandBuffer,
-                                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                P1.pipelineLayout, 1, 1, &DS_SlWheel2.descriptorSets[currentImage], //since 3 wheels (3 DS) we replicate this bind
-                                0, nullptr);
-        vkCmdDrawIndexed(commandBuffer,
-                         static_cast<uint32_t>(M_SlWheel.indices.size()), 1, 0, 0, 0);
-        vkCmdBindDescriptorSets(commandBuffer,
-                                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                P1.pipelineLayout, 1, 1, &DS_SlWheel3.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
-                                0, nullptr);
-        vkCmdDrawIndexed(commandBuffer,
-                         static_cast<uint32_t>(M_SlWheel.indices.size()), 1, 0, 0, 0);
+                         static_cast<uint32_t>(M_Hint.indices.size()), 1, 0, 0, 0);
         //----------------
 	}
 
@@ -317,13 +300,6 @@ protected:
         const float ROT_SPEED = glm::radians(90.0f);
         const float MOVE_SPEED = 6.75f;
         
-        static double old_xpos = 0, old_ypos = 0;
-        double xpos, ypos;
-        double m_dx = xpos - old_xpos;
-        double m_dy = ypos - old_ypos;
-        old_xpos = xpos; old_ypos = ypos;
-        
-        glm::vec3 oldRobotPos = RobotPos;
         if(glfwGetKey(window, GLFW_KEY_LEFT)) {
             lookYaw += deltaT * ROT_SPEED;
         }
@@ -458,7 +434,7 @@ protected:
         float direction_y = sin((lookPitch));
         float direction_z = sin((lookYaw)) * cos((lookPitch));
         gubo.cameraDir = glm::normalize(glm::vec3(direction_x, direction_y, direction_z));
-        std::cout << gubo.cameraDir[0] << " " << gubo.cameraDir[1] << " " << gubo.cameraDir[2] << "\n";
+        //std::cout << gubo.cameraDir[0] << " " << gubo.cameraDir[1] << " " << gubo.cameraDir[2] << "\n";
         
         
         // Global
@@ -498,7 +474,6 @@ protected:
                     sizeof(ubo), 0, &data);
         memcpy(data, &ubo, sizeof(ubo));
         vkUnmapMemory(device, DS_IntBlock.uniformBuffersMemory[0][currentImage]);
-        ubo.highlightColor = glm::vec3(0.0, 0.0, 0.0); //set back to null highlight
         // ------------
         
         // (DOOR) doing for every model or better for every (DS_)
@@ -508,30 +483,17 @@ protected:
                     sizeof(ubo), 0, &data);
         memcpy(data, &ubo, sizeof(ubo));
         vkUnmapMemory(device, DS_Door.uniformBuffersMemory[0][currentImage]);
+        ubo.highlightColor = glm::vec3(0.0, 0.0, 0.0); //set back to null highlight
         // ------------
         
-        // (WHEEL1) doing for every model or better for every (DS_)
-        ubo.model = glm::translate(glm::mat4(1), glm::vec3(-0.15f, 0.93f, -0.15f))
-        * glm::rotate(glm::mat4(1), time * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // you can modify your ubo for each DS before passing it
-        vkMapMemory(device, DS_SlWheel1.uniformBuffersMemory[0][currentImage], 0,
+        // (HINT) doing for every model or better for every (DS_)
+        ubo.model = glm::mat4(1.0);
+        vkMapMemory(device, DS_Hint.uniformBuffersMemory[0][currentImage], 0,
                     sizeof(ubo), 0, &data);
         memcpy(data, &ubo, sizeof(ubo));
-        vkUnmapMemory(device, DS_SlWheel1.uniformBuffersMemory[0][currentImage]);
+        vkUnmapMemory(device, DS_Hint.uniformBuffersMemory[0][currentImage]);
         // ------------
-        // (WHEEL2) doing for every model or better for every (DS_)
-        ubo.model = glm::translate(glm::mat4(1), glm::vec3(0.0f, 0.93f, -0.15f)); // you can modify your ubo for each DS before passing it
-        vkMapMemory(device, DS_SlWheel2.uniformBuffersMemory[0][currentImage], 0,
-                    sizeof(ubo), 0, &data);
-        memcpy(data, &ubo, sizeof(ubo));
-        vkUnmapMemory(device, DS_SlWheel2.uniformBuffersMemory[0][currentImage]);
-        // ------------
-        // (WHEEL3) doing for every model or better for every (DS_)
-        ubo.model = glm::translate(glm::mat4(1), glm::vec3(0.15f, 0.93f, -0.15f)); // you can modify your ubo for each DS before passing it
-        vkMapMemory(device, DS_SlWheel3.uniformBuffersMemory[0][currentImage], 0,
-                    sizeof(ubo), 0, &data);
-        memcpy(data, &ubo, sizeof(ubo));
-        vkUnmapMemory(device, DS_SlWheel3.uniformBuffersMemory[0][currentImage]);
-        // ------------
+        
 	}
 };
 
