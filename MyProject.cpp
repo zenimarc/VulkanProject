@@ -60,6 +60,7 @@ protected:
 	Model M_SlHandle;
 	Texture T_SlHandle;
 	DescriptorSet DS_SlHandle; // instances of DSLobj
+    DescriptorSet DS_SlHandle2; // instances of DSLobj
     // ---------
     
     Model M_Door;
@@ -74,13 +75,6 @@ protected:
     Texture T_Hint;
     DescriptorSet DS_Hint; // instances of DSLobj
     
-    // for each model (WHEELS)
-    Model M_SlWheel;
-    Texture T_SlWheel;
-    DescriptorSet DS_SlWheel1; // instances three times because same model with same texture but diff pos.
-    DescriptorSet DS_SlWheel2;
-    DescriptorSet DS_SlWheel3;
-    // ---------
     
     
     DescriptorSet DS_global;
@@ -95,9 +89,9 @@ protected:
 		initialBackgroundColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
 		// Descriptor pool sizes
-		uniformBlocksInPool = 6; // how many descriptor set you're going to use
-		texturesInPool = 5;
-		setsInPool = 6; //handle, body, global for now + 3 wheels
+		uniformBlocksInPool = 7; // how many descriptor set you're going to use
+		texturesInPool = 6;
+		setsInPool = 7; //handle, body, global for now + 3 wheels
 	}
 
 	// Here you load and setup all your Vulkan objects
@@ -137,6 +131,9 @@ protected:
 		DS_SlHandle.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
 											{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
 											{1, TEXTURE, 0, &T_SlHandle}});
+        DS_SlHandle2.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
+                                            {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
+                                            {1, TEXTURE, 0, &T_SlHandle}});
         
         // ---------------
         
@@ -173,6 +170,7 @@ protected:
 		M_SlBody.cleanup();
 		// model 2 cleanup
 		DS_SlHandle.cleanup();
+        DS_SlHandle2.cleanup();
 		T_SlHandle.cleanup();
 		M_SlHandle.cleanup();
         // interactive block cleanup
@@ -242,6 +240,12 @@ protected:
 								0, nullptr);
 		vkCmdDrawIndexed(commandBuffer,
 						 static_cast<uint32_t>(M_SlHandle.indices.size()), 1, 0, 0, 0);
+        vkCmdBindDescriptorSets(commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                P1.pipelineLayout, 1, 1, &DS_SlHandle2.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
+                                0, nullptr);
+        vkCmdDrawIndexed(commandBuffer,
+                         static_cast<uint32_t>(M_SlHandle.indices.size()), 1, 0, 0, 0);
         //----------------
         
         // MODEL OF Interactive Block
@@ -340,10 +344,11 @@ protected:
         if(glfwGetKey(window, GLFW_KEY_G)) {
             RobotPos -= MOVE_SPEED * glm::vec3(0.0f, deltaT, 0.0f);
         }
-        std::cout << std::to_string(RobotPos[0]) << " " << std::to_string(RobotPos[1])<< " " << std::to_string(RobotPos[2])<< " " << "\n";
+        //std::cout << std::to_string(RobotPos[0]) << " " << std::to_string(RobotPos[1])<< " " << std::to_string(RobotPos[2])<< " " << "\n";
         
         
         
+        int nearest_plat_index = getNearestPlatform(RobotPos);
         // possible code to move an object after an interaction (going up and down like a platform)
         float animationDuration = 2; // seconds of animation
         static int isMoving = 0;
@@ -352,14 +357,16 @@ protected:
         static glm::vec3 handlePosEnd = glm::vec3(0.0f, 8.0f, 0.1f);
         static glm::vec3 handlePos = handlePosStart;
         if (!isMoving && glfwGetKey(window, GLFW_KEY_SPACE)) {
-            std::cout << isCameraOnPlatform(getVerticesOfPlatform(0), RobotPos);
+            std::cout << "nearest plat: " << nearest_plat_index;
             isMoving = 1;
             interactionStartTime = std::chrono::high_resolution_clock::now();
         }
         if (isMoving){
-            bool cameraNeedToMove = isCameraOnPlatform(getVerticesOfPlatform(0), RobotPos);
+            bool cameraNeedToMove = isCameraOnPlatform(getVerticesOfPlatform(nearest_plat_index), RobotPos);
+            std::cout << "camera need to move: " << cameraNeedToMove;
             float deltaTimeAnimation = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - interactionStartTime).count();
             if (deltaTimeAnimation >= animationDuration) {
+                
                 handlePos = handlePosEnd;
                 isMoving = 0;
                 glm::vec3 handlePosTemp = handlePosEnd;
@@ -461,6 +468,13 @@ protected:
 		memcpy(data, &ubo, sizeof(ubo));
 		vkUnmapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage]);
 		// ------------
+        // (HANDLE2) doing for every model or better for every (DS_)
+        ubo.model = glm::translate(glm::mat4(1), glm::vec3(-17.9, handlePos[1], 12.0)); // you can modify your ubo for each DS before passing it
+        vkMapMemory(device, DS_SlHandle2.uniformBuffersMemory[0][currentImage], 0,
+                    sizeof(ubo), 0, &data);
+        memcpy(data, &ubo, sizeof(ubo));
+        vkUnmapMemory(device, DS_SlHandle2.uniformBuffersMemory[0][currentImage]);
+        // ------------
         
         // (INTBLOCK) doing for every model or better for every (DS_)
         ubo.model = glm::translate(glm::mat4(1), glm::vec3(-26.0, -1.8, 33.0)) *
