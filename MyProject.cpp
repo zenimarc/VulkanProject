@@ -318,8 +318,11 @@ protected:
             {12.195593f, 4.260537f},{1.732248f, 4.486275f},{1.605743f, 7.818107f},{-11.123894f, 8.001146f},{-10.993432f, 20.290096f},{-0.542608f, 20.20587f},{-0.713717f, 29.559076f},{-12.631978f, 29.501474f},{-13.009111f, 21.811964f},{-17.388380f, 21.739685f},{-17.589445f, 5.879795f},{-7.972856f, 5.238356f},{-7.965707f, 0.072984f},{12.422435f, 0.125029f}
         };
         
-        VerticesOfPlatform plat = getVerticesOfIntBlock();
+        VerticesOfPlatform plat = getVerticesOfPlatform(0);
         Point platform[]={{plat.v1[0], plat.v1[1]}, {plat.v2[0], plat.v2[1]}, {plat.v3[0], plat.v3[1]}, {plat.v4[0], plat.v4[1]}};
+        plat = getVerticesOfPlatform(1);
+        Point platform2[]={{plat.v1[0], plat.v1[1]}, {plat.v2[0], plat.v2[1]}, {plat.v3[0], plat.v3[1]}, {plat.v4[0], plat.v4[1]}};
+        Point doorVertices[] = {{-4.93, 32.13}, {-2.79, 32.56}, {-2.75, 42.54}, {-5.17, 42.39}};
         
         glm::vec3 oldRobotPos = RobotPos;
         if(glfwGetKey(window, GLFW_KEY_LEFT)) {
@@ -362,7 +365,11 @@ protected:
         if(glfwGetKey(window, GLFW_KEY_G)) {
             RobotPos -= MOVE_SPEED * glm::vec3(0.0f, deltaT, 0.0f);
         }
+        
         if (RobotPos[1]<2.0f) {
+            if (!doorUnlocked && isInside(doorVertices, sizeof(doorVertices)/sizeof(doorVertices[0]), {RobotPos[0], RobotPos[2]})){
+                RobotPos = oldRobotPos;
+            }
             if (!isInside(polygonFirstLevel, sizeof(polygonFirstLevel)/sizeof(polygonFirstLevel[0]), {RobotPos[0], RobotPos[2]})) {
                 RobotPos = oldRobotPos;
             }
@@ -371,7 +378,8 @@ protected:
                 RobotPos = oldRobotPos;
             }
         }else{
-            if (!isInside(platform, sizeof(platform)/sizeof(platform[0]), {RobotPos[0], RobotPos[2]})) {
+            if ((!isInside(platform, sizeof(platform)/sizeof(platform[0]), {RobotPos[0], RobotPos[2]}))
+                && !isInside(platform2, sizeof(platform2)/sizeof(platform2[0]), {RobotPos[0], RobotPos[2]})) {
                 RobotPos = oldRobotPos;
             }
         }
