@@ -2134,14 +2134,43 @@ struct VerticesOfPlatform {
     glm::vec2 v4;
 };
 
+
 VerticesOfPlatform getVerticesOfPlatform(int n){
-    //for now we have only 1 platform, so the n param is unused
     VerticesOfPlatform plat1;
-    plat1.v1 = glm::vec2(2.0f, 0.15f);
-    plat1.v2 = glm::vec2(7.55f, 0.26f);
-    plat1.v3 = glm::vec2(7.44f, 5.05f);
-    plat1.v4 = glm::vec2(1.74f, 5.06f);
+    if (n==0) {
+        plat1.v1 = glm::vec2(2.0f, 0.15f);
+        plat1.v2 = glm::vec2(7.55f, 0.26f);
+        plat1.v3 = glm::vec2(7.44f, 5.05f);
+        plat1.v4 = glm::vec2(1.74f, 5.06f);
+        
+    } else {
+        plat1.v1 = glm::vec2(-17.37f, 14.85f);
+        plat1.v2 = glm::vec2(-12.45f, 15.0f);
+        plat1.v3 = glm::vec2(-12.45f, 21.85f);
+        plat1.v4 = glm::vec2(-17.37f, 21.85f);
+    }
     return plat1;
+}
+
+VerticesOfPlatform getVerticesOfIntBlock(){
+    VerticesOfPlatform plat1;
+    plat1.v1 = glm::vec2(-25.0f, 33.0f);
+    plat1.v2 = glm::vec2(-25.0f, 37.0f);
+    plat1.v3 = glm::vec2(-20.0f, 37.0f);
+    plat1.v4 = glm::vec2(-20.0f, 33.0f);
+    return plat1;
+}
+
+int getNearestPlatform(glm::vec3 cameraPos) {
+    float dist1 = sqrt(pow(cameraPos[0] - getVerticesOfPlatform(0).v1[0], 2) +
+                       pow(cameraPos[2] - getVerticesOfPlatform(0).v1[1], 2));
+    float dist2 = sqrt(pow(cameraPos[0] - getVerticesOfPlatform(1).v1[0], 2) +
+                       pow(cameraPos[2] - getVerticesOfPlatform(1).v1[1], 2));
+    if (dist1 < dist2) {
+        return 0;
+    } else {
+        return 1;
+    }
 }
 
 bool isCameraOnPlatform(VerticesOfPlatform plat, glm::vec3 camera_pos) {
@@ -2150,3 +2179,4 @@ bool isCameraOnPlatform(VerticesOfPlatform plat, glm::vec3 camera_pos) {
     Point p = {camera_pos[0], camera_pos[2]};
     return isInside(polygon1, n, p);
 }
+
