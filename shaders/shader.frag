@@ -60,7 +60,7 @@ void main() {
     vec3 p1_color = point_light_color(fragPos, p1_pos);
     vec3 p1_specular = specColor * pow(max(dot(-reflect(p1_lD, N),V), 0.0f), specPower);
     vec3 p1_diffuse = diffColor * max(dot(N,p1_lD), 0.0f);
-    vec3 p1_final = p1_color * (p1_diffuse);
+    vec3 p1_final = p1_color * (p1_diffuse); // using only diffuse right know
 
     
     outColor = vec4(clamp(0.2f*ambient + 1.2*p1_final + 0.5*ubo.highlightColor, vec3(0.0f), vec3(1.0f)), 1.0f);
