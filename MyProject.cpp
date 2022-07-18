@@ -51,16 +51,16 @@ protected:
 	Pipeline P1;
 
 	// Models, textures and Descriptors (values assigned to the uniforms)
-    // (SLOT BODY)
-	Model M_SlBody;
-	Texture T_SlBody;
-    DescriptorSet DS_SlBody; // instances of DSLobj, are elments that are passed to shaders
+    // (CAVE)
+	Model M_Cave;
+	Texture T_Cave;
+    DescriptorSet DS_Cave; // instances of DSLobj, are elments that are passed to shaders
     
-    // for each model (HANDLE)
-	Model M_SlHandle;
-	Texture T_SlHandle;
-	DescriptorSet DS_SlHandle; // instances of DSLobj
-    DescriptorSet DS_SlHandle2; // instances of DSLobj
+    // for each model (PLATFORM)
+	Model M_Platform;
+	Texture T_Platform;
+	DescriptorSet DS_Platform1; // instances of DSLobj
+    DescriptorSet DS_Platform2; // instances of DSLobj
     // ---------
     
     Model M_Door;
@@ -115,25 +115,25 @@ protected:
 		P1.init(this, "shaders/vert.spv", "shaders/frag.spv", {&DSLglobal, &DSLobj}); //the first changes less freq while the last more frequently.
 
 		// Models, textures and Descriptors (values assigned to the uniforms)
-		M_SlBody.init(this, MODEL_PATH + "newcave.obj");
-		T_SlBody.init(this, TEXTURE_PATH + "block.png");
-		DS_SlBody.init(this, &DSLobj, {// the second parameter, is a pointer to the Uniform Set Layout of this set
+		M_Cave.init(this, MODEL_PATH + "newcave.obj");
+		T_Cave.init(this, TEXTURE_PATH + "block.png");
+		DS_Cave.init(this, &DSLobj, {// the second parameter, is a pointer to the Uniform Set Layout of this set
 										  // the last parameter is an array, with one element per binding of the set.
 										  // first  elmenet : the binding number
 										  // second element : UNIFORM or TEXTURE (an enum) depending on the type
 										  // third  element : only for UNIFORMs, the size of the corresponding C++ object
 										  // fourth element : only for TEXTUREs, the pointer to the corresponding texture object
 										  {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-										  {1, TEXTURE, 0, &T_SlBody}});
+										  {1, TEXTURE, 0, &T_Cave}});
         // (HANDLE) for each model
-		M_SlHandle.init(this, MODEL_PATH + "block.obj");
-		T_SlHandle.init(this, TEXTURE_PATH + "redBrick.png");
-		DS_SlHandle.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
+		M_Platform.init(this, MODEL_PATH + "block.obj");
+		T_Platform.init(this, TEXTURE_PATH + "redBrick.png");
+		DS_Platform1.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
 											{0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-											{1, TEXTURE, 0, &T_SlHandle}});
-        DS_SlHandle2.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
+											{1, TEXTURE, 0, &T_Platform}});
+        DS_Platform2.init(this, &DSLobj, {// it uses same layout but we set a different instance of it
                                             {0, UNIFORM, sizeof(UniformBufferObject), nullptr},
-                                            {1, TEXTURE, 0, &T_SlHandle}});
+                                            {1, TEXTURE, 0, &T_Platform}});
         
         // ---------------
         
@@ -165,14 +165,14 @@ protected:
 	void localCleanup()
 	{
 		// model 1 cleanup
-		DS_SlBody.cleanup();
-		T_SlBody.cleanup();
-		M_SlBody.cleanup();
+		DS_Cave.cleanup();
+		T_Cave.cleanup();
+		M_Cave.cleanup();
 		// model 2 cleanup
-		DS_SlHandle.cleanup();
-        DS_SlHandle2.cleanup();
-		T_SlHandle.cleanup();
-		M_SlHandle.cleanup();
+		DS_Platform1.cleanup();
+        DS_Platform2.cleanup();
+		T_Platform.cleanup();
+		M_Platform.cleanup();
         // interactive block cleanup
         DS_IntBlock.cleanup();
         T_IntBlock.cleanup();
@@ -208,44 +208,44 @@ protected:
                                 0, nullptr);
 
 		// MODEL OF BODY
-		VkBuffer vertexBuffers[] = {M_SlBody.vertexBuffer};
+		VkBuffer vertexBuffers[] = {M_Cave.vertexBuffer};
 		// property .vertexBuffer of models, contains the VkBuffer handle to its vertex buffer
 		VkDeviceSize offsets[] = {0};
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 		// property .indexBuffer of models, contains the VkBuffer handle to its index buffer
-		vkCmdBindIndexBuffer(commandBuffer, M_SlBody.indexBuffer, 0,
+		vkCmdBindIndexBuffer(commandBuffer, M_Cave.indexBuffer, 0,
 							 VK_INDEX_TYPE_UINT32);
 
 		// property .pipelineLayout of a pipeline contains its layout.
 		// property .descriptorSets of a descriptor set contains its elements.
 		vkCmdBindDescriptorSets(commandBuffer,
 								VK_PIPELINE_BIND_POINT_GRAPHICS,
-								P1.pipelineLayout, 1, 1, &DS_SlBody.descriptorSets[currentImage],
+								P1.pipelineLayout, 1, 1, &DS_Cave.descriptorSets[currentImage],
 								0, nullptr);
 
 		// property .indices.size() of models, contains the number of triangles * 3 of the mesh.
 		vkCmdDrawIndexed(commandBuffer,
-						 static_cast<uint32_t>(M_SlBody.indices.size()), 1, 0, 0, 0);
+						 static_cast<uint32_t>(M_Cave.indices.size()), 1, 0, 0, 0);
         //----------------
 
 		// MODEL OF Handle
-		VkBuffer vertexBuffersHandle[] = {M_SlHandle.vertexBuffer};
+		VkBuffer vertexBuffersHandle[] = {M_Platform.vertexBuffer};
 		VkDeviceSize offsetsHandle[] = {0};
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffersHandle, offsetsHandle);
-		vkCmdBindIndexBuffer(commandBuffer, M_SlHandle.indexBuffer, 0,
+		vkCmdBindIndexBuffer(commandBuffer, M_Platform.indexBuffer, 0,
 							 VK_INDEX_TYPE_UINT32);
 		vkCmdBindDescriptorSets(commandBuffer,
 								VK_PIPELINE_BIND_POINT_GRAPHICS,
-								P1.pipelineLayout, 1, 1, &DS_SlHandle.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
+								P1.pipelineLayout, 1, 1, &DS_Platform1.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
 								0, nullptr);
 		vkCmdDrawIndexed(commandBuffer,
-						 static_cast<uint32_t>(M_SlHandle.indices.size()), 1, 0, 0, 0);
+						 static_cast<uint32_t>(M_Platform.indices.size()), 1, 0, 0, 0);
         vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                P1.pipelineLayout, 1, 1, &DS_SlHandle2.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
+                                P1.pipelineLayout, 1, 1, &DS_Platform2.descriptorSets[currentImage], //particular objects DS (descriptors) will have set=1 (it's the first integer parameter)
                                 0, nullptr);
         vkCmdDrawIndexed(commandBuffer,
-                         static_cast<uint32_t>(M_SlHandle.indices.size()), 1, 0, 0, 0);
+                         static_cast<uint32_t>(M_Platform.indices.size()), 1, 0, 0, 0);
         //----------------
         
         // MODEL OF Interactive Block
@@ -494,25 +494,25 @@ protected:
 		// Here is where you actually update your uniforms
 		// uniformBuffersMemory[0] -> the 0 is the binding of the uniform you're going to change
 		ubo.model = glm::mat4(1.0f);
-		vkMapMemory(device, DS_SlBody.uniformBuffersMemory[0][currentImage], 0,
+		vkMapMemory(device, DS_Cave.uniformBuffersMemory[0][currentImage], 0,
 					sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(device, DS_SlBody.uniformBuffersMemory[0][currentImage]);
+		vkUnmapMemory(device, DS_Cave.uniformBuffersMemory[0][currentImage]);
 		// ------------
 
 		// (HANDLE) doing for every model or better for every (DS_)
 		ubo.model = glm::translate(glm::mat4(1), handlePos); // you can modify your ubo for each DS before passing it
-		vkMapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage], 0,
+		vkMapMemory(device, DS_Platform1.uniformBuffersMemory[0][currentImage], 0,
 					sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(device, DS_SlHandle.uniformBuffersMemory[0][currentImage]);
+		vkUnmapMemory(device, DS_Platform1.uniformBuffersMemory[0][currentImage]);
 		// ------------
         // (HANDLE2) doing for every model or better for every (DS_)
         ubo.model = glm::translate(glm::mat4(1), glm::vec3(-17.9, handlePos[1], 12.0)); // you can modify your ubo for each DS before passing it
-        vkMapMemory(device, DS_SlHandle2.uniformBuffersMemory[0][currentImage], 0,
+        vkMapMemory(device, DS_Platform2.uniformBuffersMemory[0][currentImage], 0,
                     sizeof(ubo), 0, &data);
         memcpy(data, &ubo, sizeof(ubo));
-        vkUnmapMemory(device, DS_SlHandle2.uniformBuffersMemory[0][currentImage]);
+        vkUnmapMemory(device, DS_Platform2.uniformBuffersMemory[0][currentImage]);
         // ------------
         
         // (INTBLOCK) doing for every model or better for every (DS_)
